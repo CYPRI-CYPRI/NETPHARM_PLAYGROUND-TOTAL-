@@ -424,12 +424,12 @@ renderRiskFactors(selectedMed);
   /* ===== RISK-FACTOR TICK BOXES (6x) ===== */
 
   const riskFactorMeta = [
-    { key: "severe_renal_impairment", label: "Severe renal impairment (CrCl ≤ 30 mL/min / eGFR < 30)" },
+    { key: "severe_renal_impairment", label: "Severe renal impairment (CrCl ≤ 30 mL/min or dialysis)" },
     { key: "severe_hepatic_impairment", label: "Severe hepatic impairment (Child-Pugh C / advanced liver disease)" },
-    { key: "high_bleeding_risk", label: "High bleeding risk (anticoagulants/NSAIDs, prior bleed, frailty)" },
-    { key: "recurrent_falls", label: "Recurrent falls (≥2 falls / 12 months or high fall risk)" },
-    { key: "anticholinergic_burden", label: "Anticholinergic burden (high ACB/anticholinergic load)" },
-    { key: "orthostatic_hypotension_risk", label: "Orthostatic hypotension risk (history/standing BP drop, syncope)" }
+    { key: "high_bleeding_risk", label: "High bleeding risk (anticoagulants/NSAIDs in medication, history of heavy bleeding)" },
+    { key: "recurrent_falls", label: "Recurrent falls (≥2 falls/12 months or high fall risk)" },
+    { key: "anticholinergic_burden", label: "Anticholinergic burden (ACB scale ≥ 3 and/or anticholinergic adverse drug effects)" },
+    { key: "orthostatic_hypotension_risk", label: "Orthostatic hypotension risk (history of fall or syncope /standing BP drop ≥ 30 mmHg)" }
   ];
 
   // Barvy podle Excelu:
