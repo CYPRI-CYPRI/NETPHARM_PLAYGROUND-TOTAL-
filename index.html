@@ -1,1 +1,399 @@
 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NETPHARM Algorithm</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f5f6f7;
+    }
+    h1 {
+      color: #0a2f66;
+    }
+    .box {
+      background: #eec9e7;
+      border: 2px solid #ccc;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    .recommendation-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      white-space: pre-wrap;
+    }
+
+    /* místo comorbidities se barvy pro background vybírají přímo podle typu doporučení
+    .frailty, .heart, .renal { background-color: #ffc000; }
+    .hepatic { background-color: #92d050; }*/
+    .avoid { background-color: #f65513; }
+    .caution { background-color: #ffc000; }
+    .possible { background-color: #70ad47; }
+
+    /* není použito
+    .pdf-container {
+      margin-top: 15px;
+    }*/
+
+    select, label, input[type=checkbox] {
+      font-size: 16px;
+    }
+    #logo {
+      height: 4cm;
+      width: 4cm;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+    #painType {
+      margin-top: 0.25cm;
+    }
+    label[for="painType"], label[for="medication"] {
+      display: block;
+      margin-bottom: 0.25cm;
+    }
+    .references {
+      font-size: 10px;
+      margin-top: 40px;
+      color: #333;
+    }
+    .checkbox-group label {
+      display: block;
+      margin: 5px 0;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      #logo {
+        height: 2.5cm;
+        width: 2.5cm;
+        display: block;
+        margin: 0 auto 10px;
+      }
+      .box {
+        padding: 15px;
+        font-size: 14px;
+      }
+      select, label {
+        font-size: 14px;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <img src="netpharm_logo_znacka.png" id="logo" alt="NETPHARM Logo">
+
+  <h1>CoAN-SAFE ALGORITHM: <br>
+    Optimising the Use of Psychotropic Coanalgesics in Frail Older Adults<br>
+with Hepatorenal and/or Cardiorenal Syndromes and Neuropathic Pain</h1>
+  <p><em>A Clinical Algorithm Developed Under the NETPHARM Project (New Technologies for Translational Research in Pharmaceutical Sciences). Project ID CZ.02.01.01/00/22_008/0004607, co-funded by the European Union.</em></p>
+  <p>The CoAN-SAFE algorithm is a safety-oriented clinical decision-support tool for the use of psychotropic co-analgesics in frail older adults with neuropathic pain and multimorbidity (pregabalin, gabapentin, duloxetine, venlafaxine, amitriptyline, carbamazepine). It integrates guideline-based drug selection with patient-specific vulnerability factors.</p>
+ <p>First, select the type of neuropathic pain (if known). The algorithm will suggest first- and second-line options based on international guidelines. If the pain type is unknown or if you wish to assess a specific drug (including off-label use), choose “Not specified / off-label use” and select the medication directly.</p>
+  </p>Next, select relevant patient risk domains (frailty, renal, hepatic, cardiovascular). The algorithm will generate a structured safety-focused output including key risks, monitoring recommendations, dose considerations, and a practical recommendation for clinical use.</p>
+  
+  <div class="box">
+    <label for="painType"><strong>1. Select type of neuropathic pain:</strong></label>
+    <select id="painType" onchange="showMedications()">
+      <option value="">-- Choose --</option>
+      <option value="diabetic">Diabetic neuropathy</option>
+      <option value="postherpetic">Postherpetic neuropathy</option>
+      <option value="trigeminal">Trigeminal neuralgia</option>
+      <option value="central">Central pain</option>
+      <!-- ✅ NOVÁ VOLBA -->
+      <option value="unspecified">Neuropathic pain – not specified/off-label use</option>
+    </select>
+
+    <div id="medicationsBox" style="margin-top: 0.25cm; display: none;">
+      <label for="medication"><strong>2. Select recommended medication:</strong></label>
+      <select id="medication" onchange="showComorbidities()"></select>
+    </div>
+
+    <div id="comorbidityBox" style="margin-top: 20px; display: none;">
+      <label><strong>3. Select comorbidities or patient status:</strong></label><br>
+      <div class="checkbox-group">
+        <label><input type="checkbox" value="renal"> Renal Impairment</label>
+        <label><input type="checkbox" value="hepatic"> Hepatic Impairment</label>
+        <label><input type="checkbox" value="cardiac"> Cardiovascular Risk</label>
+        <label><input type="checkbox" value="frailty"> Frailty Syndrome</label>
+      </div>
+      <button onclick="showMultipleRecommendations()">Show Recommendations</button>
+    </div>
+
+    <div id="recommendation" style="margin-top: 20px;"></div>
+   <!-- MONITORING -->
+<div id="monitoringWrapper" style="display:none; margin-top:20px;">
+  <label>
+    <input type="checkbox" id="monitoringCheckbox" onchange="toggleMonitoringBox()">
+    <strong>Monitoring</strong>
+  </label>
+  <div id="monitoringBox"
+       style="display:none;
+              background:#ffffff;
+              border:1px solid #ccc;
+              border-radius:8px;
+              padding:15px;
+              margin-top:10px;
+              color:#000;">
+  </div>
+</div>
+  </div>
+
+
+
+  <div class="references">
+    <strong>Guideline References:</strong><br>
+    EFNS 2010 – Attal N, Cruccu G, Baron R, Haanpää M, Hansson P, Jensen TS, Nurmikko T. EFNS guidelines on the pharmacological treatment of neuropathic pain: 2010 revision. <em>Eur J Neurol.</em> 2010 Sep;17(9):1113-e88. doi:10.1111/j.1468-1331.2010.02999.x. PMID: 20402746.<br><br>
+    NICE CG173 – National Institute for Health and Care Excellence. Neuropathic pain in adults: pharmacological management in non-specialist settings [CG173]. London: NICE; 2013 [updated 2020 Dec]. Available from: https://www.nice.org.uk/guidance/cg173<br><br>
+    CPS 2022 – Mu A, Weinberg E, Moulin DE, Clarke H. Pharmacologic management of chronic neuropathic pain: Review of the Canadian Pain Society consensus statement. <em>Can Fam Physician.</em> 2022 Nov;68(11):844–50.<br><br>
+    AAN 2022 – Price R, Smith D, Franklin GM, Gronseth G, Pignone M, David WS, et al. Oral and topical treatment of painful diabetic polyneuropathy: Practice guideline update summary. <em>Neurology.</em> 2022 Jan 4;98(1):31–43. doi:10.1212/WNL.0000000000013038.<br><br>
+     <strong>Acknowledgement: <strong> We would like to thank Ing. Pavel Šebelík for his essential IT support and for helping to implement and optimise the algorithm.<br><br>
+     <strong>The algorithm is intended for non-commercial use only (academic, educational, and clinical purposes). <strong><br><br>
+  </div>
+
+  <script>
+    const drugOptions = {
+      diabetic: [
+        "Amitriptyline (EFNS, NICE, AAN, CPS)",
+        "Duloxetine (EFNS, NICE, AAN, CPS)",
+        "Venlafaxine (EFNS, NICE, AAN, CPS)",
+        "Gabapentin (EFNS, AAN, CPS)",
+        "Pregabalin (EFNS, NICE, AAN, CPS)"
+      ],
+      postherpetic: [
+        "Amitriptyline (EFNS, NICE, CPS)",
+        "Duloxetine (NICE)",
+        "Venlafaxine (NICE)",
+        "Gabapentin (EFNS, CPS)",
+        "Pregabalin (EFNS, NICE, CPS)"
+      ],
+      trigeminal: [
+        "Carbamazepine (EFNS, NICE, CPS)"
+      ],
+      central: [
+        "Amitriptyline (EFNS, NICE)",
+        "Duloxetine (NICE)",
+        "Venlafaxine (NICE)",
+        "Gabapentin (EFNS)",
+        "Pregabalin (EFNS, NICE)"
+      ],
+      /* ✅ Nový blok – všech šest léčiv */
+      unspecified: [
+        "Amitriptyline",
+        "Duloxetine",
+        "Venlafaxine",
+        "Gabapentin",
+        "Pregabalin",
+        "Carbamazepine"
+      ]
+    };
+
+    const recommendations = {
+      amitriptyline: {
+                renal: '<div class="recommendation-box caution"><b>RENAL IMPAIRMENT: USE WITH CAUTION.</b><br><b>Risks:</b> Amitriptyline undergoes extensive first-pass hepatic metabolism, forming several active metabolites before excretion in the urine. Between 12% and 80% of the dose is eliminated renally, primarily as metabolites. It is not a nephrotoxic drug, but urinary retention, orthostatic hypotension, and other cardiovascular adverse effects may secondarily contribute to renal impairment.<br><b>Dose adjustment:</b> For patients with mild to severe renal impairment, including those on haemodialysis, dose adjustments are generally not required; however, caution is advised.<br><b>Recommendation:</b><br>Use with caution in patients with renal impairment. Regularly monitor sodium and renal function parameters, particularly in older adults or in patients receiving interacting medications.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>HEPATIC IMPAIRMENT: BETTER AVOID.</b><br><b>Risks:</b> Amitriptyline undergoes extensive hepatic metabolism. CYP2D6 is the primary metabolic pathway, while CYP1A2, CYP2C19 and CYP3A4 are minor contributors. The drug may cause mild and transient increases in liver enzymes (occurring in 10-12% of patients) and is a rare cause of clinically apparent acute cholestatic liver injury. These aminotransferase abnormalities are usually mild, asymptomatic, and transient and are a rare cause of clinically apparent acute cholestatic liver injury. Reduced hepatic function can lead to increased drug exposure and heightened sensitivity to the anticholinergic and cardiovascular effects of amitriptyline.<br><b>Dose adjustment:</b> Use with caution in patients with hepatic impairment, as clearance is reduced, and plasma concentrations are increased. For Child-Pugh A or B, administer approximately 50% of the usual indication-specific dose, with slow titration in small increments (e.g., 5-12.5 mg) every 1-2 weeks, not exceeding 100 mg/day or the maximum recommended dose, whichever is lower.<br><b>Recommendation:</b><br>Better to avoid amitriptyline in patients with severe hepatic impairment (Child-Pugh C). For mild to moderate hepatic impairment (Child-Pugh A or B), use reduced doses with close monitoring. Discontinue immediately if hepatic injury or significant enzyme elevation occurs.</div>',
+      cardiac: '<div class="recommendation-box avoid"><b>CARDIOVASCULAR RISK: BETTER AVOID.</b><br><b>Risks:</b> Amitriptyline is a tricyclic antidepressant (TCA) that is metabolised to the active metabolite nortriptyline, which also possesses anticholinergic and cardiotoxic effects. The potential for cardiotoxicity (QTc and QRS prolongation, arrhythmia, and orthostatic hypotension) increases in patients with preexisting cardiac disease; therefore, it should be used with caution in patients with cardiac comorbidities. Reduced hepatic or renal function can lead to increased drug exposure and heightened sensitivity to the anticholinergic and cardiovascular effects of amitriptyline. CYP2D6 is the major hepatic metabolic pathway, while CYP1A2, CYP2C19 and CYP3A4 are minor pathways. Potent inhibitors of these enzymes may increase plasma concentrations and exacerbate cardiotoxicity. TCAs have also been rarely associated with the syndrome of inappropriate antidiuretic hormone secretion (SIADH) and/or hyponatraemia, particularly in the elderly, which may further compromise cardiovascular stability.<br><b>Dose adjustment:</b> No specific dose adjustment is required in patients with reduced ejection fraction (EF &lt; 40%). The dosing regimen should be similar to that used in elderly patients. Start with the lowest possible dose (25 mg) and titrate slowly up to a maximum of 75 mg in elderly patients, considering renal and hepatic function as well as the cumulative CNS and anticholinergic load.<br><b>Recommendation:</b><br>Avoid use in patients with severe heart failure, conduction abnormalities, or unstable cardiovascular disease. If therapy is essential, initiate treatment at the lowest possible dose and closely monitor ECG, serum sodium, and concomitant cardiovascular medications.</div>',
+        frailty: '<div class="recommendation-box avoid"><b>FRAILTY: BETTER AVOID.</b><br><b>Risks:</b> Amitriptyline can lead to increased drug exposure and sensitivity to its anticholinergic and cardiovascular effects in the elderly. It is a CNS-active and anticholinergic drug associated with sedation, dizziness, confusion, and hyponatraemia — all of which increase the risk of falls, delirium, and cognitive decline in frail older adults. It may also cause the syndrome of inappropriate antidiuretic hormone secretion (SIADH), leading to low serum sodium levels and instability. The drug contributes to the overall anticholinergic and sedative burden in polypharmacy and may worsen mobility limitations or cognitive impairment.<br><b>Dose adjustment:</b> No specific dose adjustment is required for frailty. Start with the lowest possible dose (25 mg) and titrate slowly up to a maximum of 75 mg in elderly patients, considering renal and hepatic function as well as the cumulative CNS and anticholinergic load.<br><b>Recommendation:</b><br>Avoid use in frail older adults whenever possible. Amitriptyline is listed in BEERS, EU(7)-PIM, and STOPP criteria as a potentially inappropriate medication due to its strong anticholinergic effects, cardiovascular risks, and sedation. It increases the risk of falls, confusion, constipation, and urinary retention.</div>'
+      },
+      duloxetine: {
+        renal: '<div class="recommendation-box caution"><b>RENAL IMPAIRMENT: USE WITH CAUTION.</b><br><b>Risks:</b> Renal impairment can alter the pharmacokinetics, leading to increased exposure to the parent drug and its inactive metabolites. Less than 1% of the total dose is excreted unchanged by the kidneys, and approximately 70% is eliminated renally as metabolites. Duloxetine is not directly nephrotoxic but may indirectly affect renal function through haemodynamic changes or cardiovascular adverse effects. Reduced clearance in patients with chronic kidney disease (CKD) increases the risk of drug accumulation, orthostatic hypotension, and other dose-related adverse reactions. The drug may also cause hyponatraemia or the syndrome of inappropriate antidiuretic hormone secretion (SIADH), particularly in older adults or in combination with other serotonergic agents.<br><b>Dose adjustment:</b> For patients with mild to moderate renal impairment (creatinine clearance > 30 ml/min), no dose adjustment is generally required, but therapy should begin with a low starting dose. For severe renal impairment (CKD G4-G5, CrCl ≤ 30 ml/min), duloxetine is not recommended. When treatment is considered in patients with CrCl around 30 ml/min, some experts suggest starting at 30 mg once daily and titrating slowly, not exceeding 60 mg/day.<br><b>Recommendation:</b><br>Use with caution in patients with renal impairment. Avoid duloxetine in patients with CrCl ≤ 30 ml/min. Regularly monitor renal function and serum sodium, particularly in older adults or in those receiving interacting medications.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>HEPATIC IMPAIRMENT: BETTER AVOID.</b><br><b>Risks:</b> Duloxetine undergoes extensive hepatic metabolism via the major enzymes CYP2D6 and CYP1A2, which necessitates caution in patients with hepatic impairment. Genetic polymorphisms of CYP2D6 may contribute to interindividual variability in metabolism. At higher doses, duloxetine inhibits CYP2D6 and CYP2B6, potentially affecting the metabolism of other drugs that use these pathways. Liver enzyme elevations occur in less than 1% of patients and are usually mild and transient, rarely requiring dose modification or discontinuation. However, rare cases of clinically apparent liver injury with marked enzyme elevations, with or without jaundice, have been reported.<br><b>Dose adjustment:</b> Duloxetine should be avoided in patients with hepatic impairment. If treatment is deemed necessary in mild impairment (Child-Pugh A), start at a dose of ≤30 mg once daily and titrate very slowly (no more frequently than every 2-4 weeks) with close monitoring for adverse effects. Do not exceed 30 mg/day.<br><b>Recommendation:</b><br>Avoid duloxetine in patients with hepatic impairment (Child-Pugh A to C). Discontinue treatment immediately if hepatic injury or significant liver enzyme elevation occurs.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>CARDIOVASCULAR RISK: USE WITH CAUTION.</b><br><b>Risks:</b> Duloxetine can exacerbate or cause the syndrome of inappropriate antidiuretic hormone secretion (SIADH) or hyponatraemia, both of which may further compromise cardiovascular stability. SNRIs are cardiotoxic (QTc prolongation, arrhythmia, orthostatic hypotension) and may pose risks for patients with pre-existing cardiac disease. Carefully consider potential cardiovascular effects. The risk of duloxetineinduced hypertension in older adults appears low, but the risk of orthostatic hypotension and SIADH increases with age. Renal and hepatic impairment may decrease clearance and increase drug accumulation, enhancing cardiovascular adverse effects. CYP2D6 is the major hepatic pathway, while potent enzyme inhibitors and poor metabolisers may show higher plasma concentrations and increased cardiotoxicity.<br><b>Dose adjustment:</b> No specific dose adjustment is required for patients with reduced ejection fraction (EF < 40%). Dosing should follow recommendations for elderly patients. Low initial doses (e.g., 20 mg/day) and lower maintenance doses (e.g., 30-60 mg/day) are recommended for frail or comorbid elderly patients. Titrate slowly and monitor for tolerability.<br><b>Recommendation:</b><br>Drugs that increase serum norepinephrine levels, such as SNRIs, may be harmful in individuals with unstable or advanced heart failure or significant cardiovascular disease. Duloxetine should be used with caution, particularly in older adults with cardiac comorbidities. If therapy is necessary, start at the lowest effective dose and closely monitor ECG, serum sodium, and interacting cardiovascular medications.</div>',
+        frailty: '<div class="recommendation-box caution"><b>FRAILTY: USE WITH CAUTION.</b><br><b>Risks:</b> Duloxetine can exacerbate or induce the syndrome of inappropriate antidiuretic hormone secretion (SIADH) or hyponatraemia, leading to instability, falls, delirium, and cognitive decline in frail older adults. Newer evidence suggests that SNRIs may increase the risk of falls. Elderly women may have up to a 25% longer elimination half-life. Renal impairment can also alter the drug’s disposition and increase exposure.<br><b>Dose adjustment:</b> No specific dose recommendation exists for frailty. The usual starting dose is 60 mg once daily; however, lower initial doses (e.g., 30 mg/day) may be appropriate in frail or sensitive patients to improve tolerability. The maximum dose is 120 mg/day as tolerated, although higher doses have not shown additional benefit. For patients with reduced renal function (CrCl &lt; 30 ml/min), duloxetine should be avoided. In elderly or comorbid patients, starting doses of 20-30 mg/day and maintenance doses of 30-60 mg/day are recommended. Titrate slowly and monitor for adverse effects.<br><b>Recommendation:</b><br>Duloxetine is listed in BEERS 2023 as a potentially inappropriate medication due to the risk of SIADH and falls and in STOPPFall 2021 for increased fall risk. Although EU(7)-PIM does not list duloxetine, it should be used with caution in patients with a history of falls, postural hypotension, or those at risk of hyponatraemia. Duloxetine may be considered a START medication for older adults with moderate to severe neuropathic pain when other first-line treatments (e.g., topical agents, gabapentinoids) are ineffective or not tolerated.</div>'
+      },
+      venlafaxine: {
+        renal: '<div class="recommendation-box caution"><b>RENAL IMPAIRMENT: USE WITH CAUTION.</b><br><b>Risks:</b> Venlafaxine and its metabolites are primarily eliminated by the kidneys; only about 5% of the parent compound is excreted unchanged. Approximately 87% of the dose is renally eliminated within 48 hours. It is not directly nephrotoxic but may indirectly affect renal function through cardiovascular and haemodynamic changes.<br><b>Dose adjustment:</b> For patients with mild to moderate renal impairment (creatinine clearance > 30 ml/min), no dosage adjustment is usually required. For severe renal impairment (CKD G4-G5, CrCl ≤ 30 ml/min) and hemodialysis (HD), an initial dose of 37.5 mg once daily is recommended, with careful titration while avoiding more than 50% of the maximum recommended dose.<br><b>Recommendation:</b><br>Use with caution in patients with renal impairment. In severe renal impairment, dose reduction is recommended. Regularly check sodium and renal function parameters, especially in older adults or in those receiving interacting medications.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>HEPATIC IMPAIRMENT: BETTER AVOID.</b><br><b>Risks:</b> Venlafaxine is extensively metabolised in the liver, mainly via cytochrome P450 2D6. This pathway is clinically relevant for potential drug interactions and may be affected by genetic polymorphisms of CYP2D6 and CYP2C19. Rare cases of clinically apparent liver injury have been reported. Mild elevations of liver enzymes occur in fewer than 1% of patients and are usually transient, not requiring dose adjustment or discontinuation.<br><b>Dose adjustment:</b> Use with caution in patients with hepatic impairment, as clearance is reduced, and plasma concentrations are increased. For Child-Pugh A or B, reduce the usual dose by approximately 50%. For Child-Pugh C, avoid use or consider a greater reduction with close monitoring.<br><b>Recommendation:</b><br>Better to avoid venlafaxine in patients with severe hepatic impairment (Child-Pugh C). For mild to moderate hepatic impairment (Child-Pugh A or B), use approximately 50% of the standard indicationspecific dose with close monitoring. Discontinue immediately if hepatic injury or significant enzyme elevation occurs.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>CARDIOVASCULAR RISK: USE WITH CAUTION.</b><br><b>Risks:</b> Venlafaxine can exacerbate or induce the syndrome of inappropriate antidiuretic hormone secretion (SIADH) or hyponatraemia, both of which may compromise cardiovascular stability. SNRIs may increase blood pressure, posing a risk for patients with pre-existing cardiac disease. Although venlafaxine-induced hypertension in older adults is relatively uncommon, orthostatic hypotension occurs more frequently. Renal impairment may decrease venlafaxine clearance, leading to drug accumulation and enhanced cardiovascular adverse effects. The drug’s potential for cardiotoxicity (QTc prolongation, arrhythmia, orthostatic hypotension) is greater in patients with cardiac comorbidities. CYP2D6 is the primary hepatic metabolic pathway. Potent enzyme inhibitors, as well as poor metabolisers, may exhibit increased plasma concentrations and heightened cardiotoxicity.<br><b>Dose adjustment:</b> No specific dose adjustment is required for patients with a reduced ejection fraction (EF &lt; 40%). The same dosing regimen as in elderly patients is generally appropriate. For immediaterelease formulations, start with 25-50 mg twice daily and increase by 25 mg per dose as tolerated. For extended-release formulations, start with 37.5 mg once daily and increase by 37.5 mg every 4-7 days based on tolerability.<br><b>Recommendation:</b><br>Venlafaxine should be used with caution in patients with unstable or advanced heart failure or other significant cardiovascular disease. If treatment is required, start at the lowest possible dose and closely monitor ECG, serum sodium, and interacting cardiovascular medications.</div>',
+        frailty: '<div class="recommendation-box caution"><b>FRAILTY: USE WITH CAUTION.</b><br><b>Risks:</b> Venlafaxine can exacerbate or induce the syndrome of inappropriate antidiuretic hormone secretion (SIADH) or hyponatraemia, leading to instability, falls, delirium, and cognitive decline in frail older adults. Newer evidence suggests that SNRIs may increase the risk of falls. In elderly patients, reduced renal clearance can lead to drug accumulation and a higher risk of adverse effects.<br><b>Dose adjustment:</b> For immediate-release formulations, start with 25-50 mg twice daily and increase by 25 mg per dose as tolerated. For extended-release formulations, begin with 37.5 mg once daily and increase by 37.5 mg every 4-7 days. Reduce the total daily dose by 25-50% in patients with mild to moderate renal impairment. Monitor for adverse effects and titrate slowly, taking renal function into account. There are no specific dose recommendations for frailty.<br><b>Recommendation:</b><br>Venlafaxine is listed in BEERS 2023 as a potentially inappropriate medication due to the risk of SIADH and falls and in STOPPFall 2021 for increased fall risk. It is also included in the EU(7)-PIM list for its association with higher rates of adverse outcomes, including falls and fractures. Use with caution in frail older adults, and consider safer alternatives when possible. If therapy is necessary, monitor for hyponatraemia and orthostatic symptoms, and use the lowest effective dose.</div>'
+      },
+      gabapentin: {
+        renal: '<div class="recommendation-box caution"><b>RENAL IMPAIRMENT: USE WITH CAUTION.</b><br><b>Risks:</b> Risk of overdose due to accumulation of the drug. Increased likelihood of sedation, dizziness, and ataxia, particularly in older adults or in combination with other CNS depressants.<br><b>Dose adjustment:</b><br>eGFR &ge;80 ml/min: daily dose 900-3600 mg (in 3 daily doses),<br>eGFR 50-79 ml/min: 600-1800 mg/day (in 3 daily doses),<br>eGFR 30-49 ml/min: 300-900 mg/day (in 3 daily doses),<br>eGFR 15-29 ml/min: 150 mg on alternate days - 600 mg/day (in 3 daily doses),<br>eGFR &lt;15 ml/min: 150 mg on alternate days - 300 mg/day; reduce daily dose in proportion to creatinine clearance.<br>In anuric patients on haemodialysis, an initial dose of 300-400 mg/day is recommended, followed by 200 to 300 mg of gabapentin after every 4 hours of dialysis. On non-dialysis days, gabapentin therapy should not be administered.<br><b>Recommendation:</b><br>Gabapentin may be administered provided that renal function is closely monitored and appropriate dose adjustments are made, especially when eGFR is below 60 ml/min. This agent should be used with caution in patients showing unstable or progressively declining renal function, acute kidney injury, and nephrotic syndrome.</div>',
+        hepatic: '<div class="recommendation-box possible"><b>HEPATIC IMPAIRMENT: POSSIBLE TO USE.</b><br><b>Risks:</b> Gabapentin undergoes minimal hepatic metabolism and is generally safe in patients with hepatic impairment. Clinically significant hepatotoxicity is rare. Mild CNS or respiratory depression may occur in advanced cirrhosis or hepatorenal syndrome, especially when combined with other sedatives.<br><b>Dose adjustment:</b> No dose adjustment is needed for mild to severe hepatic impairment (Child-Pugh A-C). In hepatorenal syndrome or with concurrent renal dysfunction, follow renal-dose adjustment guidelines.<br><b>Recommendation:</b><br>Possible to use in hepatic impairment. Begin at a low dose (100 mg/day) and gradually increase in cases of advanced cirrhosis or if sedation risk is present. Avoid combining with strong CNS depressants. Gabapentin may be preferred as an additional analgesic for neuropathic pain in patients with stable cirrhosis and normal renal function.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>CARDIOVASCULAR RISK: USE WITH CAUTION.</b><br><b>Risks:</b> Gabapentin can cause fluid retention by affecting arterial myogenic tone, which may worsen heart failure, increase cardiovascular risk, and raise the likelihood of events such as myocardial infarction, thromboembolism, or stroke. This risk is higher in patients with pre-existing heart failure, CKD, or cirrhosis.<br><b>Dose adjustment:</b> No specific dose adjustment is necessary for cardiac impairment. Modify the dosage according to renal function if CKD is present.<br><b>Recommendation:</b><br>Use with caution in patients with heart failure or risk of fluid overload. Employ the lowest effective dose and review therapy if oedema or dyspnoea occurs. Consider gabapentin as a safer alternative to pregabalin for patients with cardiovascular risk factors since available data indicate a lower risk of decompensation.</div>',
+        frailty: '<div class="recommendation-box caution"><b>FRAILTY: USE WITH CAUTION.</b><br><b>Risks:</b> Gabapentin is a CNS-active drug associated with sedation, dizziness, and an increased risk of falls, particularly in frail older adults. The risk is amplified when used together with other CNS depressants such as antidepressants, antipsychotics, benzodiazepines, opioids, or skeletal muscle relaxants, leading to a higher likelihood of falls, fractures, and cognitive impairment.<br><b>Dose adjustment:</b> No specific dose adjustment is required for frailty, but start at the lowest effective dose and titrate slowly, considering renal function and the cumulative CNS burden.<br><b>Recommendation:</b><br>Use with caution in frail older adults. Listed in STOPPFall 2021 as a CNS-active medication that increases fall risk and in Beers 2023 as interacting with opioids due to the potential for severe sedation and respiratory depression. Avoid combining with three or more CNS-active agents and reconsider off-label use outside neuropathic pain.</div>'
+      },
+      pregabalin: {
+        renal: '<div class="recommendation-box caution"><b>RENAL IMPAIRMENT: USE WITH CAUTION.</b><br><b>Risks:</b> Risk of overdose due to accumulation of the drug. Increased likelihood of sedation, dizziness, and ataxia, particularly in older adults or in combination with other CNS depressants.<br><b>Dose adjustment:</b><br>eGFR &ge;60 ml/min: 150-600 mg/day (in 2-3 divided doses),<br>eGFR 30-59 ml/min: 75-300 mg/day (in 2-3 divided doses),<br>eGFR 15-29 ml/min: 25-150 mg/day (in 1-2 daily doses),<br>eGFR &lt;15 ml/min: 25-75 mg/day (1 dose daily).<br>In anuric patients on haemodialysis, pregabalin is approximately 50% dialysable; an additional dose is recommended after each dialysis session.<br><b>Recommendation:</b><br>Pregabalin should be administered with appropriate dose adjustments according to renal function, especially when eGFR is below 60 ml/min. The drug should be used cautiously in patients with unstable or progressively declining renal function and discontinued if significant adverse effects occur.</div>',
+        hepatic: '<div class="recommendation-box possible"><b>HEPATIC IMPAIRMENT: POSSIBLE TO USE.</b><br><b>Risks:</b> Pregabalin undergoes minimal hepatic metabolism and is primarily eliminated unchanged by the kidneys. Clinically relevant hepatotoxicity is rare. Mild CNS or respiratory depression may occur in advanced liver disease or hepatorenal syndrome, especially when combined with other CNS depressants.<br><b>Dose adjustment:</b> No dose adjustment is needed for mild to severe hepatic impairment (Child-Pugh A-C). In hepatorenal syndrome or in the presence of renal dysfunction, follow renal-dose adjustment guidelines.<br><b>Recommendation:</b><br>Possible to use in hepatic impairment. Start at a low dose (e.g., 50 mg daily) and titrate slowly in advanced cirrhosis or when there is a risk of sedation. Avoid concurrent use with potent CNS depressants. Pregabalin may be considered a preferred co-analgesic for neuropathic pain in patients with stable cirrhosis and preserved renal function.</div>',
+        cardiac: '<div class="recommendation-box caution"><b>CARDIOVASCULAR RISK: USE WITH CAUTION.</b><br><b>Risks:</b> Pregabalin can cause fluid retention by altering arterial myogenic tone, which may lead to decompensation of heart failure, increased cardiovascular risk, and a higher incidence of myocardial infarction, thromboembolic events, and stroke. Patients with pre-existing heart failure, chronic kidney disease, or cirrhosis are at particular risk.<br><b>Dose adjustment:</b> No specific dose adjustment is required in heart failure. In patients with concomitant renal dysfunction, follow renal-dose adjustment recommendations.<br><b>Recommendation:</b><br>Use with caution in patients with heart failure or fluid retention. Initiate at the lowest effective dose and reassess therapy if oedema or dyspnoea develops. Although both gabapentin and pregabalin share this risk, some evidence suggests that gabapentin may be associated with a lower cardiovascular risk and may therefore be preferred in patients with pre-existing heart failure or high cardiovascular risk.</div>',
+        frailty: '<div class="recommendation-box caution"><b>FRAILTY: USE WITH CAUTION.</b><br><b>Risks:</b> Pregabalin is a CNS-active drug associated with sedation, dizziness, and increased risk of falls, particularly in frail older adults. Concomitant use with other CNS depressants such as sedative antidepressants, antipsychotics, benzodiazepines, opioids, or skeletal muscle relaxants further increases the likelihood of falls, fractures, and cognitive decline.<br><b>Dose adjustment:</b> No specific dose adjustment for frailty. Use the lowest effective dose and titrate slowly, considering renal function and overall CNS drug burden.<br><b>Recommendation:</b><br>Use with caution in frail older adults. Listed in STOPPFall 2021 as a CNS-active drug increasing risk of falls and in Beers 2023 as interacting with opioids due to risk of severe sedation or respiratory depression. Avoid combination with three or more CNS-active drugs and reconsider off-label use outside neuropathic pain.</div>'
+      },
+      carbamazepine: {
+        renal: '<div class="recommendation-box caution"><b>RENAL IMPAIRMENT: USE WITH CAUTION.</b><br><b>Risks:</b> Carbamazepine has been associated with hyponatraemia and the syndrome of inappropriate antidiuretic hormone secretion (SIADH), with an incidence ranging from 1.8% to 40%. Although most cases are mild, older adults are particularly vulnerable, especially when using diuretics or SSRIs. Rare but serious renal complications such as tubulointerstitial nephritis, acute renal failure, and albuminuria have also been reported.<br><b>Dose adjustment:</b> No initial dose adjustment is usually required in renal impairment, including haemodialysis. However, accumulation of the active metabolite 10,11-epoxide may occur in moderate to severe dysfunction — therapeutic drug monitoring is advisable.<br><b>Recommendation:</b><br>Use with caution in patients with renal impairment. Regularly check sodium and renal parameters, especially in older adults or those receiving interacting medications. Consider alternative drugs if significant hyponatraemia develops or renal function declines.</div>',
+        hepatic: '<div class="recommendation-box avoid"><b>HEPATIC IMPAIRMENT: BETTER AVOID.</b><br><b>Risks:</b> Carbamazepine is extensively metabolised in the liver and may cause transient or persistent elevations in hepatic enzymes. Rarely, it can induce clinically significant hepatotoxicity, including cholestatic or hepatocellular injury, granulomatous hepatitis, hepatic failure, or drug reaction with eosinophilia and systemic symptoms (DRESS). In hepatic impairment, reduced metabolism may lead to drug and metabolite accumulation, increasing the risk of toxicity.<br><b>Dose adjustment:</b> Begin with the lowest dose (100 mg/day) and increase cautiously. Monitor serum concentrations of carbamazepine and its active metabolite 10,11-epoxide to assess accumulation and toxicity.<br><b>Recommendation:</b><br>Better to avoid in patients with moderate to severe hepatic impairment. If progression occurs (for example, from Child-Pugh A to B), monitor closely and consider switching to an alternative agent. Discontinue immediately if hepatic injury or significant enzyme elevation is detected.</div>',
+        cardiac: '<div class="recommendation-box avoid"><b>CARDIOVASCULAR RISK: BETTER AVOID.</b><br><b>Risks:</b> Carbamazepine has membrane-stabilising effects that may cause bradycardia, atrioventricular block, hypotension, and, in rare cases, heart failure decompensation. Hyponatraemia secondary to the syndrome of inappropriate antidiuretic hormone secretion (SIADH) can further compromise cardiovascular stability. The drug induces CYP3A4, UGT, and P-gp enzymes, which may reduce plasma concentrations and therapeutic efficacy of cardiovascular agents such as beta-blockers, calcium channel blockers, and anticoagulants.<br><b>Dose adjustment:</b> No specific dose adjustment is required in mild cardiac impairment, but titration should be slow and based on tolerability. Therapeutic drug monitoring may be beneficial in patients with reduced cardiac output or those receiving multiple interacting medications.<br><b>Recommendation:</b><br>Better avoid in patients with moderate to severe heart failure, conduction disturbances, or unstable cardiovascular disease. If therapy is necessary, start at the lowest dose (100 mg/day) and closely monitor ECG, sodium levels, and any interacting cardiovascular drugs.</div>',
+        frailty: '<div class="recommendation-box avoid"><b>FRAILTY: BETTER AVOID.</b><br><b>Risks:</b> Carbamazepine is a CNS-active and anticholinergic drug associated with sedation, dizziness, confusion, and hyponatraemia, all of which increase the risk of falls, delirium, and cognitive decline in frail older adults. It may cause the syndrome of inappropriate antidiuretic hormone secretion (SIADH), resulting in low serum sodium and instability. The drug contributes to the overall anticholinergic and sedative burden in polypharmacy and may worsen mobility limitations or cognitive impairment.<br><b>Dose adjustment:</b> No specific dose adjustment is required for frailty. Start with the lowest effective dose (100 mg/day) and titrate slowly, considering renal and hepatic function and the cumulative CNS and anticholinergic load.<br><b>Recommendation:</b><br>Better avoid in frail older adults due to the high risk of sedation, falls, and hyponatraemia. Listed in Beers 2023 as a potentially inappropriate medication due to SIADH risk and in STOPPFall 2021 as a CNS-active drug increasing fall risk. The EU(7)-PIM list also highlights its potential for confusion, agitation, bradycardia, and anticholinergic effects. Safer alternatives such as gabapentin or lamotrigine should be preferred whenever possible.</div>'
+      }
+    }
+
+    function showMedications() {
+      const painType = document.getElementById('painType').value;
+      const medicationBox = document.getElementById('medicationsBox');
+      const medicationSelect = document.getElementById('medication');
+      const comorbidityBox = document.getElementById('comorbidityBox');
+      const recommendation = document.getElementById('recommendation');
+
+      // reset
+      medicationSelect.innerHTML = '<option value="">-- Choose --</option>';
+      recommendation.innerHTML = '';
+      comorbidityBox.style.display = 'none';
+
+      if (painType && drugOptions[painType]) {
+        drugOptions[painType].forEach(drug => {
+          const option = document.createElement('option');
+          option.textContent = drug;
+          option.value = drug.split(' ')[0].toLowerCase();
+          medicationSelect.appendChild(option);
+        });
+        medicationBox.style.display = 'block';
+      } else {
+        medicationBox.style.display = 'none';
+      }
+    }
+
+    function showComorbidities() {
+      document.getElementById('comorbidityBox').style.display = 'block';
+      document.getElementById('recommendation').innerHTML = '';
+  updateMonitoringUI();  
+    }
+
+    function showMultipleRecommendations() {
+      const selectedMed = document.getElementById('medication').value;
+      const checkboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
+      const recommendationBox = document.getElementById('recommendation');
+      let result = '';
+
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked &&
+            recommendations[selectedMed] &&
+            recommendations[selectedMed][checkbox.value]) {
+          result += recommendations[selectedMed][checkbox.value];
+        }
+      });
+
+      recommendationBox.innerHTML =
+        result || '<div class="recommendation-box">No recommendation available for this combination.</div>';
+
+      updateMonitoringUI();
+
+
+    }
+
+    
+  /* ===== MONITORING CODE ZAČÍNÁ TADY ===== */
+
+  const monitoringTexts = {
+    venlafaxine: `
+<strong>Risk monitoring:</strong><br><br>
+• Monitor blood pressure, heart rate, ECG, and serum sodium at baseline and at regular intervals (highest risk of SIADH within the first 2–4 weeks after initiation).<br>
+• Monitor renal function and observe for signs of fluid retention, orthostatic hypotension, or drug accumulation.<br>
+• Assess for dizziness, syncope, peripheral oedema, sedation, confusion, gait instability, falls, and cognitive changes, especially during treatment initiation or dose adjustments.<br>
+• Regularly review concomitant medications for potential pharmacokinetic interactions, particularly those involving CYP2D6.<br>
+• Consider CYP2D6 genotyping when clinically relevant.<br>
+• Monitor for signs of bleeding in patients with increased bleeding risk, particularly when used concomitantly with NSAIDs or anticoagulant therapy.<br>
+• Consider therapeutic drug monitoring (TDM) in high-dose treatment or in patients with increased clinical vulnerability.
+`,
+
+    duloxetine: `
+<strong>Risk monitoring:</strong><br><br>
+• Monitor blood pressure and heart rate at baseline and regularly during treatment, especially during initiation and dose changes.<br>
+• Monitor serum sodium levels (risk of SIADH and hyponatraemia).<br>
+• Monitor renal function in patients with CKD or reduced creatinine clearance.<br>
+• Monitor liver function tests and observe for signs of hepatic injury (e.g., jaundice, abdominal pain, rash, fever).<br>
+• Assess for dizziness, syncope, sedation, confusion, gait instability, falls, and overall functional deterioration.<br>
+• Monitor for orthostatic hypotension, particularly in older adults.<br>
+• Monitor for bleeding risk, especially when combined with NSAIDs or anticoagulants.<br>
+• Review concomitant medications for clinically relevant drug–drug interactions (moderate CYP2D6 inhibition).<br>
+• Consider CYP2D6 genotyping and therapeutic drug monitoring (TDM) when clinically appropriate.
+`,
+
+    carbamazepine: `
+<strong>Risk monitoring:</strong><br><br>
+• Monitor serum sodium levels at baseline and regularly (risk of SIADH and hyponatraemia).<br>
+• Monitor complete blood count (risk of leukopenia, agranulocytosis, thrombocytopenia).<br>
+• Monitor liver function tests at baseline and periodically during treatment.<br>
+• Monitor renal function, particularly in older adults or patients with comorbidities.<br>
+• Monitor blood pressure, heart rate, and ECG (risk of conduction abnormalities and bradycardia).<br>
+• Assess for dizziness, sedation, confusion, gait instability, and falls.<br>
+• Monitor for new-onset rash, especially during the first weeks (risk of SJS/TEN).<br>
+• Review concomitant medications regularly due to strong CYP3A4 induction and interaction potential.<br>
+• Consider therapeutic drug monitoring (TDM), including monitoring of the active metabolite (10,11-epoxide).
+`,
+
+    gabapentin: `
+<strong>Risk monitoring:</strong><br><br>
+• Monitor for sedation, dizziness, balance disturbances, confusion, gait instability, and falls, particularly during treatment initiation or dose escalation.<br>
+• Regularly assess renal function and adjust dose accordingly (risk of accumulation in CKD).<br>
+• Monitor for peripheral oedema, weight gain, and symptoms of fluid overload (e.g., dyspnoea, worsening heart failure).<br>
+• Monitor for signs of CNS depression, especially when combined with opioids, benzodiazepines, antidepressants, or other CNS-active drugs.<br>
+• Assess for urinary retention or voiding difficulties, particularly in frail patients.<br>
+• Review concomitant medications regularly to minimise additive CNS and fall risk.<br>
+• Consider therapeutic drug monitoring (TDM) in patients with renal impairment or unexplained toxicity.
+`,
+
+    pregabalin: `
+<strong>Risk monitoring:</strong><br><br>
+• Monitor for sedation, dizziness, balance disturbances, confusion, gait instability, and falls, particularly during treatment initiation or dose escalation.<br>
+• Regularly assess renal function and adjust dose accordingly (risk of accumulation in CKD).<br>
+• Monitor for peripheral oedema, weight gain, and symptoms of fluid overload (e.g., dyspnoea, worsening heart failure).<br>
+• Monitor for signs of CNS depression, especially when combined with opioids, benzodiazepines, antidepressants, or other CNS-active drugs.<br>
+• Assess for urinary retention or voiding difficulties, particularly in frail patients.<br>
+• Review concomitant medications regularly to minimise additive CNS and fall risk.<br>
+• Consider therapeutic drug monitoring (TDM) in patients with renal impairment or unexplained toxicity.
+`,
+
+    amitriptyline: `
+<strong>Risk monitoring:</strong><br><br>
+• Monitor renal function at baseline and regularly during treatment, especially during initiation and dose adjustments.<br>
+• Monitor liver enzymes at baseline and regularly during treatment.<br>
+• Monitor blood pressure and heart rate (risk of orthostatic hypotension, cardiovascular instability).<br>
+• Perform ECG monitoring (risk of QTc/QRS prolongation and arrhythmia).<br>
+• Monitor serum sodium levels (risk of SIADH and hyponatraemia).<br>
+• Observe for signs of fluid retention and peripheral oedema.<br>
+• Monitor for dizziness, syncope, sedation, confusion, gait instability, falls, cognitive decline, and overall functional deterioration.<br>
+• Assess for symptoms of hyponatraemia (fatigue, confusion, seizures).<br>
+• Review concomitant medications for clinically relevant drug–drug interactions, particularly via CYP2D6.<br>
+• Consider genotyping and therapeutic drug monitoring (TDM) when clinically appropriate.
+`
+  };
+
+  function toggleMonitoringBox() {
+    const cb = document.getElementById('monitoringCheckbox');
+    const box = document.getElementById('monitoringBox');
+    box.style.display = cb.checked ? 'block' : 'none';
+  }
+
+  function updateMonitoringUI() {
+    const selectedMed = document.getElementById('medication').value;
+    const wrapper = document.getElementById('monitoringWrapper');
+    const cb = document.getElementById('monitoringCheckbox');
+    const box = document.getElementById('monitoringBox');
+
+    if (!selectedMed || !monitoringTexts[selectedMed]) {
+      wrapper.style.display = 'none';
+      cb.checked = false;
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
+    }
+
+    wrapper.style.display = 'block';
+    box.innerHTML = monitoringTexts[selectedMed];
+
+    if (!cb.checked) box.style.display = 'none';
+  }
+
+  /* ===== MONITORING CODE KONČÍ ===== */
+  </script>
+</body>
+</html>
