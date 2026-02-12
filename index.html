@@ -115,6 +115,25 @@
 .monitoring-pill input[type="checkbox"]:checked + span {
   color: #0a2f66;
 }
+/* ===== Show Recommendations Button ===== */
+
+.recommendation-btn {
+  background-color: #0a2f66;   /* tmavě modrá */
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.recommendation-btn:hover {
+  background-color: #144a9e;
+  transform: translateY(-1px);
+}
 
   </style>
 </head>
@@ -168,7 +187,10 @@ Project ID CZ.02.01.01/00/22_008/0004607, co-funded by the European Union.
         <label><input type="checkbox" value="cardiac"> Cardiovascular Risk</label>
         <label><input type="checkbox" value="frailty"> Frailty Syndrome</label>
       </div>
-      <button onclick="showMultipleRecommendations()">Show Recommendations</button>
+      <button class="recommendation-btn" onclick="showMultipleRecommendations()">
+  Show Recommendations
+</button>
+
     </div>
 
     <div id="recommendation" style="margin-top: 20px;"></div>
